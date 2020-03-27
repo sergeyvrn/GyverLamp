@@ -147,6 +147,9 @@
 #include "FavoritesManager.h"
 #include "EepromManager.h"
 
+// TM1637 Driver by AKJ (ver.1.0.0) from standard library
+#include "TM1637.h"
+
 
 // --- ИНИЦИАЛИЗАЦИЯ ОБЪЕКТОВ ----------
 CRGB leds[NUM_LEDS];
@@ -236,12 +239,16 @@ uint32_t FavoritesManager::nextModeAt = 0UL;
 bool CaptivePortalManager::captivePortalCalled = false;
 
 
+TM1637 tm1637(14, 12);
+
 void setup()
 {
   Serial.begin(115200);
   Serial.println();
   ESP.wdtEnable(WDTO_8S);
 
+  tm1637.init();
+  tm1637.setBrightness(5);
 
   // ПИНЫ
   #ifdef MOSFET_PIN                                         // инициализация пина, управляющего MOSFET транзистором в состояние "выключен"
@@ -439,9 +446,18 @@ void setup()
   loadingFlag = true;
 }
 
+int lastValue = 0;
 
 void loop()
 {
+
+  time_t currentLocalTime = localTimeZone.toLocal(timeClient.getEpochTime());
+  tm1637.dispNumber(hour(currentLocalTime)*100 + minute(currentLocalTime));
+  if (second(currentLocalTime) % 2 != lastValue) {
+      lastValue = 1 - lastValue;
+      tm1637.switchColon();
+  }
+  
   parseUDP();
   effectsTick();
 
